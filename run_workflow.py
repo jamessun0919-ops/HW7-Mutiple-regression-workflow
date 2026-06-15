@@ -219,6 +219,16 @@ def main():
         frontier_mse.append(min(k_mse_vals))
         frontier_r2.append(max(k_r2_vals))
 
+    # Calculate Sweet Point (Elbow Point where R2 reaches at least 97% of max R2)
+    max_r2_val = max(frontier_r2)
+    sweet_k = 1
+    for k in range(1, N_features + 1):
+        if frontier_r2[k-1] >= 0.97 * max_r2_val:
+            sweet_k = k
+            break
+    sweet_k = max(1, min(sweet_k, N_features))
+    print(f"Calculated Sweet Point (k={sweet_k} features, R2={frontier_r2[sweet_k-1]:.4f})")
+
     # Create Rank Table DataFrame
     table_data = {"Rank": k_range}
     for name in rankings:
@@ -254,6 +264,21 @@ def main():
     for name in rankings:
         ax_r2.plot(k_range, stepwise_results[name]["r2"], label=name, color=colors[name], linewidth=2.0, marker="o", markersize=4)
     ax_r2.plot(k_range, frontier_r2, label="Frontier Path", color="#f97316", linewidth=2.5, linestyle=":", marker="D", markersize=5)
+    
+    # Mark Sweet Point
+    ax_r2.axvline(x=sweet_k, color="#ea580c", linestyle="--", alpha=0.7, linewidth=1.5)
+    ax_r2.scatter(sweet_k, frontier_r2[sweet_k-1], color="#ea580c", s=120, zorder=10, edgecolor="black", linewidth=1.5)
+    
+    # Dynamic text positioning for R2
+    x_text_r2 = sweet_k - 2.5 if sweet_k > 3 else sweet_k + 0.5
+    y_text_r2 = frontier_r2[sweet_k-1] - 0.08 if frontier_r2[sweet_k-1] > 0.2 else frontier_r2[sweet_k-1] + 0.05
+    ax_r2.annotate(f"Sweet Point (k={sweet_k})", 
+                    xy=(sweet_k, frontier_r2[sweet_k-1]), 
+                    xytext=(x_text_r2, y_text_r2),
+                    arrowprops=dict(facecolor="#ea580c", shrink=0.08, width=1.5, headwidth=6, headlength=6),
+                    fontweight="bold", color="#ea580c", fontsize=9,
+                    bbox=dict(boxstyle="round,pad=0.2", fc="#fff7ed", ec="#ffedd5", alpha=0.9))
+
     ax_r2.set_title("Test R-squared vs. Feature Subset Size (k)", fontsize=12, fontweight="bold", color="#1e293b", pad=12)
     ax_r2.set_xlabel("Feature Subset Size (k)", fontsize=10, color="#475569")
     ax_r2.set_ylabel("Test R-squared", fontsize=10, color="#475569")
@@ -270,6 +295,21 @@ def main():
     for name in rankings:
         ax_mse.plot(k_range, stepwise_results[name]["mse"], label=name, color=colors[name], linewidth=2.0, marker="o", markersize=4)
     ax_mse.plot(k_range, frontier_mse, label="Frontier Path", color="#f97316", linewidth=2.5, linestyle=":", marker="D", markersize=5)
+    
+    # Mark Sweet Point
+    ax_mse.axvline(x=sweet_k, color="#ea580c", linestyle="--", alpha=0.7, linewidth=1.5)
+    ax_mse.scatter(sweet_k, frontier_mse[sweet_k-1], color="#ea580c", s=120, zorder=10, edgecolor="black", linewidth=1.5)
+    
+    # Dynamic text positioning for MSE
+    x_text_mse = sweet_k - 2.5 if sweet_k > 3 else sweet_k + 0.5
+    y_text_mse = frontier_mse[sweet_k-1] + (max(frontier_mse) - min(frontier_mse)) * 0.15
+    ax_mse.annotate(f"Sweet Point (k={sweet_k})", 
+                    xy=(sweet_k, frontier_mse[sweet_k-1]), 
+                    xytext=(x_text_mse, y_text_mse),
+                    arrowprops=dict(facecolor="#ea580c", shrink=0.08, width=1.5, headwidth=6, headlength=6),
+                    fontweight="bold", color="#ea580c", fontsize=9,
+                    bbox=dict(boxstyle="round,pad=0.2", fc="#fff7ed", ec="#ffedd5", alpha=0.9))
+
     ax_mse.set_title("Test MSE vs. Feature Subset Size (k)", fontsize=12, fontweight="bold", color="#1e293b", pad=12)
     ax_mse.set_xlabel("Feature Subset Size (k)", fontsize=10, color="#475569")
     ax_mse.set_ylabel("Test Mean Squared Error (MSE)", fontsize=10, color="#475569")
@@ -325,8 +365,17 @@ def main():
 
     draw_premium_table(ax_table, df_table)
     
+    # Dynamic Dataset Name Mapping
+    dataset_name = "Custom Tabular Dataset"
+    if target_col == "medv":
+        dataset_name = "Boston Housing"
+    elif target_col == "median_house_value":
+        dataset_name = "California Housing"
+    elif target_col == "Profit":
+        dataset_name = "50 Startups"
+
     # Titles and spacing
-    fig.suptitle(f"General Feature Selection & Stepwise MSE Evaluation\nDataset: California Housing | Target: {target_col}", 
+    fig.suptitle(f"General Feature Selection & Stepwise MSE Evaluation\nDataset: {dataset_name} | Target: {target_col}", 
                  fontsize=16, fontweight="bold", color="#0f172a", y=0.96)
     
     plt.subplots_adjust(top=0.90, bottom=0.05, left=0.06, right=0.94, hspace=0.3, wspace=0.2)
